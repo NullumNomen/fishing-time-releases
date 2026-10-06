@@ -1,0 +1,17 @@
+FishingTime
+Gameplay/content adaptations retain AGPL-3.0 requirements.
+See SOURCE-NOTICE.md and SOURCE-LICENSE-AGPL-3.0.txt.
+Corresponding version source: https://github.com/NullumNomen/fishing-time-releases/releases
+
+Godot Engine: MIT license. https://godotengine.org/license/
+Godot copyright and third-party notices: https://godotengine.org/license/
+An offline copy of the engine's LICENSE.txt and COPYRIGHT.txt is included in release packages.
+
+Noto Sans CJK SC Regular: SIL Open Font License 1.1.
+https://github.com/notofonts/noto-cjk
+See OFL.txt (or assets/fonts/OFL.txt in the source).
+
+godot_ai editor addon: see addons/godot_ai/LICENSE in the source.
+The editor addon is not included in the playable release.
+
+Audio assets are synthesized by tools/generate_audio.py; no third-party samples.

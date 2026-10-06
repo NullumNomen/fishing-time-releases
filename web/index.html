@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FishingTime · Alpha</title>
+  <style>
+    :root {color-scheme: dark; font-family: system-ui,sans-serif; background:#102d35; color:#edf1df}
+    * {box-sizing:border-box} body {margin:0; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:14px; gap:10px}
+    header,footer {width:min(960px,100%)} header {display:flex; justify-content:space-between; align-items:center; gap:12px}
+    h1 {margin:0; font-size:19px} small {color:#b7c8bd} a {color:#c4dfa8}
+    button {background:#d5e4bd; color:#173740; border:0; padding:10px 18px; border-radius:5px; cursor:pointer; font:inherit}
+    button:disabled {opacity:.6; cursor:wait} button:focus-visible {outline:3px solid #e7b568; outline-offset:3px}
+    #stage {position:relative; width:min(960px,100%); aspect-ratio:3/2; background:#193b43; border:1px solid #50716b; overflow:hidden}
+    canvas {width:100%; height:100%; display:block; outline:none}
+    #gate {position:absolute; inset:0; display:grid; place-content:center; text-align:center; padding:24px; gap:18px; background:#193b43}
+    #gate p {margin:0; line-height:1.7} #status {color:#cedbbd; white-space:pre-wrap}
+    footer {font-size:13px; line-height:1.8} #errors {color:#ffc2a6; white-space:pre-wrap; max-height:120px; overflow:auto}
+    #stage:fullscreen {border:0; width:100vw; height:100vh; display:flex; align-items:center; justify-content:center; background:#102d35}
+    #stage:fullscreen canvas {width:min(100vw,150vh); height:min(100vh,66.6667vw)}
+    [hidden] {display:none!important}
+  </style>
+  <link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
+<link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
+
+</head>
+<body>
+  <header><h1>FishingTime <small>0.1.0-alpha.1</small></h1><button id="fullscreen" type="button">全屏 / Full screen</button></header>
+  <main id="stage">
+    <canvas id="canvas" width="960" height="640" tabindex="0" aria-label="FishingTime 游戏画面">Your browser needs WebGL 2.</canvas>
+    <div id="gate"><h2>海鸥港，等你靠岸。</h2><p>电脑浏览器 Alpha · WASD / 方向键移动，空格钓鱼，E 互动，Esc 菜单。<br>点击开始启用声音。暂未适配手机触屏。</p><button id="start" type="button">开始游戏 / Play</button><p id="status" role="status">进度保存在当前浏览器；可在 Esc 菜单下载存档备份。</p></div>
+  </main>
+  <footer>网页切到后台时游戏暂停。更换浏览器或清除网站数据前，请下载存档备份。<br>
+    <a href="https://github.com/NullumNomen/fishing-time-releases/releases">Windows 下载 / 版本说明</a> · <a href="https://github.com/NullumNomen/fishing-time-releases/issues">反馈问题</a> · <a href="https://github.com/NullumNomen/fishing-time-releases/releases/download/v0.1.0-alpha.1/fishing-time-0.1.0-alpha.1-source.zip">本版本源码（AGPL-3.0）</a> · <a href="THIRD-PARTY-NOTICES.txt">许可与来源</a>
+    <div id="errors" role="alert"></div>
+  </footer>
+  <input id="save-file" type="file" accept=".json,application/json" hidden>
+  <script src="index.js"></script>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const status = document.getElementById('status');
+    const errors = document.getElementById('errors');
+    const start = document.getElementById('start');
+    const gate = document.getElementById('gate');
+    const fileInput = document.getElementById('save-file');
+    window.fishingTime = {
+      chooseSave() { fileInput.value = ''; fileInput.click(); },
+      receiveSave: null
+    };
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      if (file.size > 1048576) { alert('存档不能超过 1 MB。'); return; }
+      if (!confirm('导入会替换当前进度。建议先下载备份。继续吗？')) return;
+      try {
+        if (typeof fishingTime.receiveSave !== 'function') throw new Error('游戏尚未启动。');
+        fishingTime.receiveSave(await file.text());
+        canvas.focus();
+      } catch (error) { alert('导入失败：' + error.message); }
+    });
+    const engine = new Engine({"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":15035424,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4});
+    start.addEventListener('click', async () => {
+      start.disabled = true;
+      status.textContent = '正在载入游戏…';
+      try {
+        await engine.startGame({
+          canvas, canvasResizePolicy: 0,
+          onProgress(current, total) { status.textContent = total > 0 ? `正在载入 ${Math.round(current / total * 100)}%` : '正在载入游戏…'; },
+          onPrintError(...parts) { errors.textContent += parts.join(' ') + '\n'; console.error(...parts); }
+        });
+        gate.hidden = true;
+        canvas.focus();
+      } catch (error) {
+        status.textContent = '加载失败：' + error.message + '\n请使用支持 WebGL 2 的电脑浏览器重试。';
+        start.disabled = false;
+      }
+    });
+    document.getElementById('fullscreen').addEventListener('click', async () => {
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else await document.getElementById('stage').requestFullscreen();
+        canvas.focus();
+      } catch (error) { errors.textContent = '此浏览器不支持全屏：' + error.message; }
+    });
+    canvas.addEventListener('keydown', event => {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Tab'].includes(event.key)) event.preventDefault();
+    });
+  </script>
+</body>
+</html>
+
